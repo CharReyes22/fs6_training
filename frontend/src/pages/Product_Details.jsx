@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { BASE_URL } from "../api/base";
+import { AuthContext } from "../context/AuthProvider";
+import { useNavigate } from "react-router-dom";
 
 const Product_Details = () => {
   const { id } = useParams();
@@ -14,6 +16,32 @@ const Product_Details = () => {
     if (product) setQty((q) => Math.min(product.countInStock, q + 1));
   };
   const decrement = () => setQty((q) => Math.max(1, q - 1));
+
+  const { isAuthenticated } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  const getAuthHeader = () => {
+    const token = localStorage.getItem("access_token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
+  const handleAddToCart = async () => {
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const payload = { product_id: product.id, qty };
+      await axios.post(`${BASE_URL}/cart/add/`, payload, {
+        headers: { ...getAuthHeader() },
+      });
+      alert("Added to cart");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to add to cart");
+    }
+  };
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -89,9 +117,7 @@ const Product_Details = () => {
               </div>
 
               <button
-                onClick={() =>
-                  console.log(`Add ${qty} of ${product.id} to cart`)
-                }
+                onClick={handleAddToCart}
                 className="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800"
               >
                 Add to cart
